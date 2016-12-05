@@ -21,6 +21,7 @@ DWORD GetProcessID(char * exe_name){
 	}
 	CloseHandle(snapshot);
 	return NULL;
+	return;
 }
 
 
