@@ -3,6 +3,8 @@
 #include <TlHelp32.h>
 #include <iostream>
 #include <vector>
+#include <easyhook.h>
+
 
 DWORD GetProcessID(char * exe_name){
 
@@ -71,10 +73,8 @@ void writeMemory(HANDLE proc, void *adr, T val, boolean prot = TRUE) {
 }
 
 
-void hookCall(BYTE *hook_at, BYTE *new_func) {
-	void *offset = (void *)(new_func - hook_at - 5);
-
-	return 
+void hookCall(HANDLE proc, BYTE *hook_at, BYTE *new_func, bool prot = TRUE) {
+	// Should just use an external lib for this. Maybe MinHook or Detours from MS
 }
 
 void error() {
