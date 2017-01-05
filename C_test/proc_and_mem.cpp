@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <easyhook.h>
-
+#include "CPPnHook.h"
 
 DWORD GetProcessID(char * exe_name){
 
@@ -72,10 +72,23 @@ void writeMemory(HANDLE proc, void *adr, T val, boolean prot = TRUE) {
 
 }
 
+LPDWORD get_ASLR(HANDLE proc) {
+	LPDWORD new_base;
 
-void hookCall(HANDLE proc, BYTE *hook_at, BYTE *new_func, bool prot = TRUE) {
-	// Should just use an external lib for this. Maybe MinHook or Detours from MS
+	//Start by getting the k32 module addr (this is constant and not affected by ASLR, so equal between procs)
+	HMODULE kernel32 = GetModuleHandle("kernel32.dll");
+
+	LPVOID get_proc_addr = GetProcAddress(kernel32, "GetModuleHandleA");
+	if(!get_proc_addr)
+		get_proc_addr = GetProcAddress(kernel32, "GetModuleHandleW"); // We have to deal with Unicode bullshit :l
+
+	HANDLE thread = CreateRemoteThread(proc, NULL, NULL, (LPTHREAD_START_ROUTINE)get_proc_addr, NULL, NULL, NULL); //Get_proc_addr without args = current module :)
+	WaitForSingleObject(thread, INFINITE);
+	GetExitCodeThread(thread, new_base);
+	CloseHandle(thread);
+	return new_base;
 }
+
 
 void error() {
 	char err[256];
@@ -83,6 +96,8 @@ void error() {
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(),
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), err, 255, NULL);
 }
+
+
 
 int main(void) {
 	DWORD proc_handle = GetProcessID("notepad.exe");
