@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <Windows.h>
-#include <TlHelp32.h>
-#include <iostream>
-#include <vector>
-#include <easyhook.h>
 #include "CPPnHook.h"
 
 DWORD GetProcessID(char * exe_name){
@@ -43,34 +37,6 @@ DWORD GetThreads(DWORD process_ID, std::vector<DWORD> vec){
 	return NULL;
 }
 
-template<typename T>
-DWORD protectMemory(HANDLE proc, void *adr, DWORD prot) {
-	DWORD oldProt;
-	VirtualProtectEx(proc, adr, sizeof(T), prot, &oldProt);
-	return oldProt;
-}
-
-template<typename T>
-T readMemory(HANDLE proc, void *adr, boolean prot = TRUE) {
-	T val;
-	DWORD oldprot;
-	if(prot == TRUE) oldprot = protectMemory<T>(proc, adr, PAGE_READWRITE);
-	if (ReadProcessMemory(proc, adr, &val, sizeof(T), NULL) == 0) {
-		error();
-	}
-	if (prot == TRUE) protectMemory<T>(proc, adr, oldprot);
-
-	return val;
-}
-
-template<typename T>
-void writeMemory(HANDLE proc, void *adr, T val, boolean prot = TRUE) {
-	DWORD oldprot;
-	if(prot == TRUE) oldprot = protectMemory<T>(proc, adr, PAGE_READWRITE);
-	WriteProcessMemory(proc, adr, &val, sizeof(T), NULL);
-	if(prot == TRUE) protectMemory<T>(proc, adr, oldprot);
-
-}
 
 LPDWORD get_ASLR(HANDLE proc) {
 	LPDWORD new_base;
@@ -97,36 +63,3 @@ void error() {
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), err, 255, NULL);
 }
 
-
-
-int main(void) {
-	DWORD proc_handle = GetProcessID("notepad.exe");
-	if (proc_handle == NULL) {
-		perror("Find Window");
-		return -1;
-	}
-
-	std::vector<DWORD> vec;
-	GetThreads(proc_handle,vec);
-	
-	HANDLE open_proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, proc_handle);
-	if (open_proc == NULL) error();
-
-	printf("Open Proc: %d\n", open_proc);
-		
-
-	_int64 base = 0x007FFA35C21010;
-	for (__int64 i = base; i < (base + 100000); i = i + 1 ) {
-		auto pre = readMemory<BYTE>(open_proc, (LPVOID)i);
-		writeMemory<BYTE>(open_proc, (LPVOID)i, 0x90);
-		auto post = readMemory<BYTE>(open_proc, (LPVOID)i);
-
-		printf("(%x): %x\t(%x)\n", i, pre, post);
-	}
-
-
-	Sleep(2000);
-
-
-	return 0;
-}
